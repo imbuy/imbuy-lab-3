@@ -53,3 +53,8 @@ logging:
   level:
     imbuy.lot: DEBUG
 
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:dGhpc19pcy1hLWxvbmdlci1iYXNlNjQtand0LXNlY3JldC1rZXk=}
+

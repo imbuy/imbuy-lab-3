@@ -25,7 +25,7 @@ spring:
           predicates:
             - Path=/users/**
           filters:
-            - RewritePath=/users/(?<segment>.*), /$\{segment}
+            - StripPrefix=0
 
         - id: category-service-swagger
           uri: lb://category-service
@@ -39,7 +39,7 @@ spring:
           predicates:
             - Path=/categories/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=0
 
         # Lot Service
         - id: lot-service-swagger
@@ -54,7 +54,7 @@ spring:
           predicates:
             - Path=/lots/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=0
 
         # Bid Service
         - id: bid-service-swagger
@@ -69,7 +69,7 @@ spring:
           predicates:
             - Path=/bids/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=0
 
 springdoc:
   api-docs:
