@@ -10,10 +10,6 @@ logging:
 
 app:
   security:
-    jwt:
-      secret: ${JWT_SECRET:dGhpc19pcy1hLWxvbmdlci1iYXNlNjQtand0LXNlY3JldC1rZXk=}
-      access-token-validity: 3600000
-      refresh-token-validity: 1209600000
     default-supervisor:
       email: ${DEFAULT_SUPERVISOR_EMAIL:supervisor@imbuy.local}
       password: ${DEFAULT_SUPERVISOR_PASSWORD:Supervisor123!}

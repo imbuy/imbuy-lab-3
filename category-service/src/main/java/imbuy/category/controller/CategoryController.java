@@ -3,6 +3,7 @@ package imbuy.category.controller;
 import imbuy.category.dto.*;
 import imbuy.category.service.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,13 +46,13 @@ public class CategoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a new category", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Create a new category", security = @SecurityRequirement(name = "bearerAuth"))
     public Mono<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest categoryRequest) {
         return categoryService.createCategory(categoryRequest);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update category", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Update category", security = @SecurityRequirement(name = "bearerAuth"))
     public Mono<CategoryResponse> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryRequest categoryRequest) {
@@ -60,7 +61,7 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete category", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Delete category", security = @SecurityRequirement(name = "bearerAuth"))
     public Mono<Void> deleteCategory(@PathVariable Long id) {
         return categoryService.deleteCategory(id);
     }
