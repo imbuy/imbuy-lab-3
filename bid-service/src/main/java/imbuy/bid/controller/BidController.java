@@ -4,6 +4,7 @@ import imbuy.bid.dto.BidDto;
 import imbuy.bid.dto.CreateBidDto;
 import imbuy.bid.service.BidService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +38,7 @@ public class BidController {
 
     @PostMapping("/lots/{lotId}")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Place a bid on a lot", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Place a bid on a lot", security = @SecurityRequirement(name = "bearerAuth"))
     public Mono<BidDto> placeBid(
             @PathVariable Long lotId,
             @RequestParam Long currentUserId,
