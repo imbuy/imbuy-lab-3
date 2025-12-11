@@ -64,10 +64,15 @@ public class UserService {
 
     private void requireSelfOrSupervisor(Long targetUserId, UserPrincipal requester) {
         if (requester == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Unauthorized (Error 401): JWT token is required. Please provide Authorization header with Bearer token");
         }
         if (!requester.isSupervisor() && !requester.getId().equals(targetUserId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    String.format("Access Denied (Error 403): You can only modify your own profile. " +
+                                    "Attempted to modify user ID %d, but you are user ID %d with role %s. " +
+                                    "Users with role USER can only modify their own resources.",
+                            targetUserId, requester.getId(), requester.getRole()));
         }
     }
 }

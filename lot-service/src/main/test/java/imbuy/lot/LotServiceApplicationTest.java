@@ -193,7 +193,6 @@ class LotServiceApplicationTest {
                 new BigDecimal("1500.00"),
                 new BigDecimal("100.00"),
                 2L,
-                testOwnerId,
                 LocalDateTime.now().plusDays(1),
                 LocalDateTime.now().plusDays(14)
         );
@@ -215,7 +214,6 @@ class LotServiceApplicationTest {
                 new BigDecimal("100.00"),
                 new BigDecimal("10.00"),
                 1L,
-                testOwnerId,
                 LocalDateTime.now(),
                 LocalDateTime.now().minusDays(1)
         );
@@ -518,7 +516,6 @@ class LotServiceApplicationTest {
                 new BigDecimal("1200.00"),
                 new BigDecimal("60.00"),
                 3L,
-                testOwnerId,
                 LocalDateTime.now().plusDays(1),
                 LocalDateTime.now().plusDays(10)
         );

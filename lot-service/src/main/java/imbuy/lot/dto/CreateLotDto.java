@@ -18,7 +18,6 @@ public record CreateLotDto(
         @DecimalMin(value = "0.0", inclusive = false, message = "Bid step must be greater than 0")
         BigDecimal bid_step,
         Long category_id,
-        Long owner_id,
         LocalDateTime start_date,
         LocalDateTime end_date
 ) {}

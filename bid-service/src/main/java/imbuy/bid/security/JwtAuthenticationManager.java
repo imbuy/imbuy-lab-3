@@ -21,7 +21,8 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
         try {
             String token = authentication.getCredentials().toString();
             if (!jwtService.isTokenValid(token)) {
-                return Mono.empty();
+                return Mono.error(new org.springframework.security.authentication.BadCredentialsException(
+                        "Invalid or expired JWT token"));
             }
 
             String username = jwtService.extractUsername(token);
@@ -35,8 +36,11 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
             authToken.setDetails(userId);
 
             return Mono.just(authToken);
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            return Mono.error(e);
         } catch (Exception e) {
-            return Mono.empty();
+            return Mono.error(new org.springframework.security.authentication.BadCredentialsException(
+                    "Invalid JWT token: " + e.getMessage()));
         }
     }
 }

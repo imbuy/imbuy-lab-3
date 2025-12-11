@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -152,6 +153,7 @@ public class LotService {
     }
 
     private Lot buildLotFromRequest(CreateLotDto createLotDto, Long ownerId) {
+        validateBidStep(createLotDto.bid_step());
         return Lot.builder()
                 .title(createLotDto.title())
                 .description(createLotDto.description())
@@ -171,11 +173,21 @@ public class LotService {
         Lot.LotBuilder lotBuilder = lot.toBuilder();
         if (updateLotDto.title() != null) lotBuilder.title(updateLotDto.title());
         if (updateLotDto.description() != null) lotBuilder.description(updateLotDto.description());
-        if (updateLotDto.bid_step() != null) lotBuilder.bidStep(updateLotDto.bid_step());
+        if (updateLotDto.bid_step() != null) {
+            validateBidStep(updateLotDto.bid_step());
+            lotBuilder.bidStep(updateLotDto.bid_step());
+        }
         if (updateLotDto.end_date() != null) lotBuilder.endDate(updateLotDto.end_date());
         if (updateLotDto.category_id() != null) lotBuilder.categoryId(updateLotDto.category_id());
 
         return lotRepository.save(lotBuilder.build());
+    }
+
+    private void validateBidStep(BigDecimal bidStep) {
+        if (bidStep == null || bidStep.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Bid step must be greater than 0. Provided value: " + bidStep);
+        }
     }
 
     private Lot updateLotStatus(Lot lot, LotStatus newStatus) {
@@ -193,7 +205,9 @@ public class LotService {
 
     private void validateOwnership(Lot lot, Long userId) {
         if (!lot.getOwnerId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only modify your own lots");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    String.format("Access Denied (Error 403): You can only modify your own lots. " +
+                            "This lot belongs to user ID %d, but you are user ID %d.", lot.getOwnerId(), userId));
         }
     }
 
@@ -222,16 +236,20 @@ public class LotService {
         try {
             UserDto approver = userClient.getUserById(currentUserId);
             if (approver == null || approver.role() == null) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate approver permissions");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Cannot validate approver permissions: User not found or role is missing");
             }
             String role = approver.role();
             if (!"SUPERVISOR".equalsIgnoreCase(role) && !"MODERATOR".equalsIgnoreCase(role)) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only supervisors or moderators can approve lots");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        String.format("Invalid role '%s' for approval. Only SUPERVISOR or MODERATOR roles can approve lots. " +
+                                "Your current role does not have permission to perform this action.", role));
             }
         } catch (ResponseStatusException ex) {
             throw ex;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate approver permissions");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Cannot validate approver permissions: " + e.getMessage());
         }
     }
 
@@ -239,7 +257,8 @@ public class LotService {
         try {
             UserDto user = userClient.getUserById(currentUserId);
             if (user == null || user.role() == null) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate user permissions");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Cannot validate user permissions: User not found or role is missing");
             }
             String role = user.role();
 
@@ -251,11 +270,14 @@ public class LotService {
                 return;
             }
 
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own lots or be a moderator");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    String.format("Access Denied (Error 403): You can only cancel your own lots or be a MODERATOR. " +
+                            "Your current role is '%s' and you are not the owner of this lot.", role));
         } catch (ResponseStatusException ex) {
             throw ex;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate user permissions");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Cannot validate user permissions: " + e.getMessage());
         }
     }
 

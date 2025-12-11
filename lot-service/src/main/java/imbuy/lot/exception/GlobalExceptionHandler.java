@@ -59,15 +59,40 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", ex.getStatusCode().value());
+        body.put("error", ex.getStatusCode().toString());
+
+        String message = Objects.requireNonNullElse(ex.getReason(), "Unknown error");
+
+        // Add error code for FORBIDDEN (403) errors
+        if (ex.getStatusCode().value() == 403) {
+            body.put("errorCode", "ACCESS_DENIED_403");
+            if (message.contains("Access denied") || message.contains("can only modify")) {
+                message = "Access Denied (Error 403): " + message + ". You do not have permission to perform this action. " +
+                        "Users with role USER can only modify their own resources. " +
+                        "Please ensure you are accessing your own resource or have appropriate permissions.";
+            } else if (message.contains("Only supervisors") || message.contains("moderators")) {
+                message = "Access Denied (Error 403): " + message + ". This action requires SUPERVISOR or MODERATOR role.";
+            } else if (message.contains("Owner cannot")) {
+                message = "Access Denied (Error 403): " + message;
+            }
+        }
+
+        // Add error code for UNAUTHORIZED (401) errors
+        if (ex.getStatusCode().value() == 401) {
+            body.put("errorCode", "UNAUTHORIZED_401");
+            if (message.contains("JWT token")) {
+                message = "Unauthorized (Error 401): " + message;
+            }
+        }
+
+        body.put("message", message);
 
         return ResponseEntity
                 .status(ex.getStatusCode())
-                .body(Map.of(
-                        "timestamp", LocalDateTime.now(),
-                        "status", ex.getStatusCode().value(),
-                        "error", ex.getStatusCode().toString(),
-                        "message", Objects.requireNonNullElse(ex.getReason(), "Unknown error")
-                ));
+                .body(body);
     }
 
     /**

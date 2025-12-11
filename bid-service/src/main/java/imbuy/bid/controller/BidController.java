@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -41,10 +42,21 @@ public class BidController {
     @Operation(summary = "Place a bid on a lot", security = @SecurityRequirement(name = "bearerAuth"))
     public Mono<BidDto> placeBid(
             @PathVariable Long lotId,
-            @RequestParam Long currentUserId,
-            @Valid @RequestBody CreateBidDto createBidDto) {
+            @Valid @RequestBody CreateBidDto createBidDto,
+            Authentication authentication) {
 
-        return bidService.placeBid(lotId, createBidDto, currentUserId);
+        Long userId = getUserIdFromAuthentication(authentication);
+        return bidService.placeBid(lotId, createBidDto, userId);
+    }
+
+    private Long getUserIdFromAuthentication(Authentication authentication) {
+        if (authentication == null || authentication.getDetails() == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "JWT token is required. Please provide Authorization header with Bearer token"
+            );
+        }
+        return (Long) authentication.getDetails();
     }
 
     @GetMapping("/lots/{lotId}/winning")
