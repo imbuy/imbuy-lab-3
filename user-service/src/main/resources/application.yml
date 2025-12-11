@@ -7,3 +7,10 @@ spring:
 logging:
   level:
     imbuy.user: DEBUG
+
+app:
+  security:
+    default-supervisor:
+      email: ${DEFAULT_SUPERVISOR_EMAIL:supervisor@imbuy.local}
+      password: ${DEFAULT_SUPERVISOR_PASSWORD:Supervisor123!}
+      username: ${DEFAULT_SUPERVISOR_USERNAME:Supervisor}

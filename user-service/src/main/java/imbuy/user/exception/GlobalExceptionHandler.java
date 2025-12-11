@@ -70,21 +70,4 @@ public class GlobalExceptionHandler {
                         "message", Objects.requireNonNullElse(ex.getReason(), "Unknown error")
                 ));
     }
-
-
-    /**
-     * Fallback
-     */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
-
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
-                        "timestamp", LocalDateTime.now(),
-                        "status", 500,
-                        "error", "Internal Server Error",
-                        "message", ex.getMessage()
-                ));
-    }
 }

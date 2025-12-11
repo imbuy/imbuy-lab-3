@@ -45,13 +45,13 @@ public class CategoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a new category")
+    @Operation(summary = "Create a new category", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public Mono<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest categoryRequest) {
         return categoryService.createCategory(categoryRequest);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update category")
+    @Operation(summary = "Update category", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public Mono<CategoryResponse> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryRequest categoryRequest) {
@@ -60,7 +60,7 @@ public class CategoryController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete category")
+    @Operation(summary = "Delete category", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public Mono<Void> deleteCategory(@PathVariable Long id) {
         return categoryService.deleteCategory(id);
     }

@@ -1,5 +1,7 @@
 package imbuy.user.domain;
 
+import imbuy.user.domain.Role;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -10,7 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -35,6 +36,13 @@ public class User {
 
     @Size(max = 100)
     private String username;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
+    @Column(nullable = false)
+    private Boolean active;
 
     @CreationTimestamp
     @Column(name = "created_at")

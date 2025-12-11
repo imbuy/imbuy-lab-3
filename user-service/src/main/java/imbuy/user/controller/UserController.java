@@ -1,7 +1,8 @@
 package imbuy.user.controller;
 
-import imbuy.user.dto.RegisterRequest;
+import imbuy.user.dto.UpdateUserRequest;
 import imbuy.user.dto.UserDto;
+import imbuy.user.security.UserPrincipal;
 import imbuy.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -10,27 +11,23 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 @Tag(name = "User Management", description = "APIs for managing users")
 public class UserController {
 
     private final UserService userService;
 
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Register a new user")
-    public Mono<UserDto> register(@Valid @RequestBody RegisterRequest request) {
-        return userService.register(request);
-    }
-
     @GetMapping
-    @Operation(summary = "Get paginated list of users")
+    @PreAuthorize("hasRole('SUPERVISOR')")
+    @Operation(summary = "Get paginated list of users (supervisor only)")
     public Flux<UserDto> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -39,18 +36,27 @@ public class UserController {
         return userService.findAllUsers(pageable);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     @Operation(summary = "Get user by ID")
-    public Mono<UserDto> getUserById(@PathVariable Long id) {
-        return userService.findById(id);
+    public Mono<UserDto> getUserById(@PathVariable Long id, Authentication authentication) {
+        return userService.findById(id, principal(authentication));
     }
 
-    @PutMapping("/{id}/profile")
+    @PutMapping("/update/{id}/profile")
+    @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Update user profile")
     public Mono<UserDto> updateProfile(
             @PathVariable Long id,
-            @Valid @RequestBody RegisterRequest request) {
+            @Valid @RequestBody UpdateUserRequest request,
+            Authentication authentication) {
 
-        return userService.updateProfile(id, request);
+        return userService.updateProfile(id, request, principal(authentication));
+    }
+
+    private UserPrincipal principal(Authentication authentication) {
+        if (authentication == null || authentication.getPrincipal() == null) {
+            return null;
+        }
+        return (UserPrincipal) authentication.getPrincipal();
     }
 }

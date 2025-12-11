@@ -73,10 +73,17 @@ public class GlobalExceptionHandler {
 
 
     /**
-     * Fallback
+     * Fallback - catch all other exceptions and return proper error code
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+
+        // Return 500 only for truly unexpected errors, but with proper message
+        String message = "An unexpected error occurred. Please try again later.";
+        if (ex.getMessage() != null && !ex.getMessage().isEmpty()) {
+            // For known exceptions, use a sanitized message
+            message = ex.getMessage();
+        }
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -84,7 +91,7 @@ public class GlobalExceptionHandler {
                         "timestamp", LocalDateTime.now(),
                         "status", 500,
                         "error", "Internal Server Error",
-                        "message", ex.getMessage()
+                        "message", message
                 ));
     }
 }
