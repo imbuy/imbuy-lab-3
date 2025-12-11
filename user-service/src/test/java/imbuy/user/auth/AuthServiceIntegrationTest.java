@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestPropertySource(properties = {
         "spring.cloud.config.enabled=false",
         "eureka.client.enabled=false",
-        "app.security.jwt.secret=dGhpc19pcy1hLWxvbmdlci1iYXNlNjQtand0LXNlY3JldC1rZXk=",
         "springdoc.api-docs.enabled=false"
 })
 class AuthServiceIntegrationTest {
@@ -64,6 +63,13 @@ class AuthServiceIntegrationTest {
                 .password(passwordEncoder.encode("Supervisor123!"))
                 .username("supervisor")
                 .role(Role.SUPERVISOR)
+                .active(true)
+                .build());
+        userRepository.save(User.builder()
+                .email("moderator@test.com")
+                .password(passwordEncoder.encode("Moderator123!"))
+                .username("moderator")
+                .role(Role.MODERATOR)
                 .active(true)
                 .build());
     }
@@ -128,6 +134,60 @@ class AuthServiceIntegrationTest {
                     assertThat(refreshed.user().email()).isEqualTo(userEmail);
                 })
                 .verifyComplete();
+    }
+
+    @Test
+    void moderatorShouldBeAbleToLogin() {
+        StepVerifier.create(authService.login(new LoginRequest("moderator@test.com", "Moderator123!")))
+                .assertNext(response -> {
+                    assertThat(response.accessToken()).isNotBlank();
+                    assertThat(response.refreshToken()).isNotBlank();
+                    assertThat(response.user().email()).isEqualTo("moderator@test.com");
+                    assertThat(response.user().role()).isEqualTo(Role.MODERATOR);
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void registerShouldSupportModeratorRole() {
+        RegisterRequest request = new RegisterRequest(
+                "newmoderator@example.com",
+                "NewPass123!",
+                "newmoderator",
+                Role.MODERATOR
+        );
+
+        StepVerifier.create(authService.register(request))
+                .assertNext(dto -> {
+                    assertThat(dto.id()).isNotNull();
+                    assertThat(dto.role()).isEqualTo(Role.MODERATOR);
+                })
+                .verifyComplete();
+
+        Optional<User> saved = userRepository.findByEmail("newmoderator@example.com");
+        assertTrue(saved.isPresent());
+        assertThat(saved.get().getRole()).isEqualTo(Role.MODERATOR);
+    }
+
+    @Test
+    void registerShouldSupportSupervisorRole() {
+        RegisterRequest request = new RegisterRequest(
+                "newsupervisor@example.com",
+                "NewPass123!",
+                "newsupervisor",
+                Role.SUPERVISOR
+        );
+
+        StepVerifier.create(authService.register(request))
+                .assertNext(dto -> {
+                    assertThat(dto.id()).isNotNull();
+                    assertThat(dto.role()).isEqualTo(Role.SUPERVISOR);
+                })
+                .verifyComplete();
+
+        Optional<User> saved = userRepository.findByEmail("newsupervisor@example.com");
+        assertTrue(saved.isPresent());
+        assertThat(saved.get().getRole()).isEqualTo(Role.SUPERVISOR);
     }
 }
 

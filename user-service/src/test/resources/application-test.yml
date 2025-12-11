@@ -1,0 +1,16 @@
+# src/test/resources/application-test.yml
+app:
+  security:
+    jwt:
+      secret: dGhpc19pcy1hLWxvbmdlci1iYXNlNjQtand0LXNlY3JldC1rZXk=
+
+spring:
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          enabled: false
