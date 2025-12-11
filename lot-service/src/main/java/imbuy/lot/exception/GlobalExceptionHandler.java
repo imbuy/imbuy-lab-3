@@ -2,11 +2,10 @@ package imbuy.lot.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.bind.support.WebExchangeBindException;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.server.ServerWebInputException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -17,13 +16,13 @@ import java.util.Objects;
 public class GlobalExceptionHandler {
 
     /**
-     * Validation errors (@Valid) for WebFlux
+     * Validation errors (@Valid) for WebMVC
      */
-    @ExceptionHandler(WebExchangeBindException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(WebExchangeBindException ex) {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
 
         Map<String, String> errors = new HashMap<>();
-        ex.getFieldErrors().forEach(err ->
+        ex.getBindingResult().getFieldErrors().forEach(err ->
                 errors.put(err.getField(), err.getDefaultMessage())
         );
 
@@ -37,12 +36,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
-
     /**
      * Incorrect JSON, broken types, missing params
      */
-    @ExceptionHandler(ServerWebInputException.class)
-    public ResponseEntity<Map<String, Object>> handleBadInput(ServerWebInputException ex) {
+    @ExceptionHandler({org.springframework.web.bind.MissingServletRequestParameterException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
+    public ResponseEntity<Map<String, Object>> handleBadInput(Exception ex) {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
@@ -50,7 +49,7 @@ public class GlobalExceptionHandler {
                         "timestamp", LocalDateTime.now(),
                         "status", 400,
                         "error", "Bad Request",
-                        "message", ex.getReason()
+                        "message", Objects.requireNonNullElse(ex.getMessage(), "Invalid request")
                 ));
     }
 
@@ -68,6 +67,30 @@ public class GlobalExceptionHandler {
                         "status", ex.getStatusCode().value(),
                         "error", ex.getStatusCode().toString(),
                         "message", Objects.requireNonNullElse(ex.getReason(), "Unknown error")
+                ));
+    }
+
+    /**
+     * Fallback - catch all other exceptions and return proper error code
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
+        // Log the exception for debugging but don't expose internal details
+
+        // Return 500 only for truly unexpected errors, but with proper message
+        String message = "An unexpected error occurred. Please try again later.";
+        if (ex.getMessage() != null && !ex.getMessage().isEmpty()) {
+            // For known exceptions, use a sanitized message
+            message = ex.getMessage();
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 500,
+                        "error", "Internal Server Error",
+                        "message", message
                 ));
     }
 }
