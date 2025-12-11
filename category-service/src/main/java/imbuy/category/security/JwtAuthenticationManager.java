@@ -27,7 +27,6 @@ public class JwtAuthenticationManager implements ReactiveAuthenticationManager {
             String username = jwtService.extractUsername(token);
             Long userId = jwtService.extractUserId(token);
 
-            // Create a simple authentication token with user info
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     username,
                     token,

@@ -27,7 +27,7 @@ public class LotService {
     private final UserClient userClient;
     private final LotRepository lotRepository;
 
-    public List<LotDto> getLots(LotFilterDto filter, Pageable pageable, Long currentUserId) {
+    public List<LotDto> getLots(LotFilterDto filter, Pageable pageable) {
         Page<Lot> lots = findLotsByFilter(filter, pageable);
         return lots.map(this::mapToDtoWithUserInfo).getContent();
     }
@@ -69,7 +69,7 @@ public class LotService {
     @Transactional
     public LotDto cancelLot(Long lotId, Long currentUserId, String reason) {
         Lot lot = findLotById(lotId);
-        validateOwnership(lot, currentUserId);
+        validateCancelPermissions(lot, currentUserId);
         validateLotStatus(lot, LotStatus.PENDING_APPROVAL, "Lot cannot be rejected");
 
         Lot cancelledLot = updateLotStatus(lot, LotStatus.CANCELLED);
@@ -221,13 +221,41 @@ public class LotService {
         }
         try {
             UserDto approver = userClient.getUserById(currentUserId);
-            if (approver == null || approver.role() == null || !"SUPERVISOR".equalsIgnoreCase(approver.role())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only supervisors can approve lots");
+            if (approver == null || approver.role() == null) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate approver permissions");
+            }
+            String role = approver.role();
+            if (!"SUPERVISOR".equalsIgnoreCase(role) && !"MODERATOR".equalsIgnoreCase(role)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only supervisors or moderators can approve lots");
             }
         } catch (ResponseStatusException ex) {
             throw ex;
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate approver permissions");
+        }
+    }
+
+    private void validateCancelPermissions(Lot lot, Long currentUserId) {
+        try {
+            UserDto user = userClient.getUserById(currentUserId);
+            if (user == null || user.role() == null) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate user permissions");
+            }
+            String role = user.role();
+
+            if ("MODERATOR".equalsIgnoreCase(role)) {
+                return;
+            }
+
+            if (lot.getOwnerId().equals(currentUserId)) {
+                return;
+            }
+
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own lots or be a moderator");
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate user permissions");
         }
     }
 

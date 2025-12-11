@@ -2,6 +2,8 @@ package imbuy.user.security;
 
 import imbuy.user.domain.Role;
 import imbuy.user.domain.User;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,6 +11,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+@Getter
+@Setter
 public class UserPrincipal implements UserDetails {
 
     private final Long id;
@@ -23,14 +27,6 @@ public class UserPrincipal implements UserDetails {
         this.password = user.getPassword();
         this.role = user.getRole();
         this.active = Boolean.TRUE.equals(user.getActive());
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public Role getRole() {
-        return role;
     }
 
     public boolean isSupervisor() {

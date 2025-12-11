@@ -38,8 +38,7 @@ public class LotController {
         if (status != null) {
             try {
                 lotStatus = LotStatus.valueOf(status.toUpperCase());
-            } catch (IllegalArgumentException e) {
-                // ignore invalid status
+            } catch (IllegalArgumentException ignored) {
             }
         }
 
@@ -52,7 +51,7 @@ public class LotController {
         );
 
         Pageable pageable = PageRequest.of(page, Math.min(size, 50));
-        List<LotDto> lots = lotService.getLots(filter, pageable, ownerId);
+        List<LotDto> lots = lotService.getLots(filter, pageable);
         return ResponseEntity.ok(lots);
     }
 
