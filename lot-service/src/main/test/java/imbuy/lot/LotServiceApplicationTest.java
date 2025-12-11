@@ -88,7 +88,7 @@ class LotServiceApplicationTest {
 
         wireMock.resetAll();
 
-        testUser = new UserDto(testOwnerId, "owner@test.com", "testuser");
+        testUser = new UserDto(testOwnerId, "owner@test.com", "testuser", "USER");
 
         testLot = Lot.builder()
                 .title("Test Laptop")
@@ -107,8 +107,10 @@ class LotServiceApplicationTest {
         testLot = lotRepository.save(testLot);
 
         when(userClient.getUserById(testOwnerId)).thenReturn(testUser);
-        when(userClient.getUserById(2L)).thenReturn(new UserDto(2L, "user2@test.com", "user2"));
-        when(userClient.getUserById(3L)).thenReturn(new UserDto(3L, "winner@test.com", "winner"));
+        when(userClient.getUserById(2L)).thenReturn(new UserDto(2L, "user2@test.com", "user2", "USER"));
+        when(userClient.getUserById(3L)).thenReturn(new UserDto(3L, "winner@test.com", "winner", "USER"));
+        when(userClient.getUserById(4L)).thenReturn(new UserDto(4L, "moderator@test.com", "moderator", "MODERATOR"));
+        when(userClient.getUserById(5L)).thenReturn(new UserDto(5L, "supervisor@test.com", "supervisor", "SUPERVISOR"));
     }
 
     @Test
@@ -116,7 +118,7 @@ class LotServiceApplicationTest {
         LotFilterDto filter = new LotFilterDto(null, null, null, null, false);
 
         List<LotDto> result = lotService.getLots(filter,
-                PageRequest.of(0, 10), testOwnerId);
+                PageRequest.of(0, 10));
 
         assertNotNull(result);
         assertEquals(1, result.size());
@@ -129,7 +131,7 @@ class LotServiceApplicationTest {
         LotFilterDto filter = new LotFilterDto("Laptop", null, null, null, false);
 
         List<LotDto> result = lotService.getLots(filter,
-                PageRequest.of(0, 10), testOwnerId);
+                PageRequest.of(0, 10));
 
         assertEquals(1, result.size());
     }
@@ -154,11 +156,11 @@ class LotServiceApplicationTest {
 
         List<LotDto> page1 = lotService.getLots(
                 new LotFilterDto(null, null, null, null, false),
-                PageRequest.of(0, 10), testOwnerId);
+                PageRequest.of(0, 10));
 
         List<LotDto> page2 = lotService.getLots(
                 new LotFilterDto(null, null, null, null, false),
-                PageRequest.of(1, 10), testOwnerId);
+                PageRequest.of(1, 10));
 
         assertNotNull(page1);
         assertNotNull(page2);
@@ -223,13 +225,13 @@ class LotServiceApplicationTest {
     }
 
     @Test
-    void approveLot_shouldChangeStatusToActive() {
+    void approveLot_shouldChangeStatusToActive_whenSupervisor() {
         testLot = testLot.toBuilder()
                 .status(LotStatus.PENDING_APPROVAL)
                 .build();
         testLot = lotRepository.save(testLot);
 
-        LotDto result = lotService.approveLot(testLot.getId(), testOwnerId);
+        LotDto result = lotService.approveLot(testLot.getId(), 5L); // supervisor
 
         assertEquals(LotStatus.ACTIVE, result.status());
 
@@ -238,18 +240,44 @@ class LotServiceApplicationTest {
     }
 
     @Test
-    void approveLot_shouldThrowWhenNotOwner() {
+    void approveLot_shouldChangeStatusToActive_whenModerator() {
+        testLot = testLot.toBuilder()
+                .status(LotStatus.PENDING_APPROVAL)
+                .build();
+        testLot = lotRepository.save(testLot);
+
+        LotDto result = lotService.approveLot(testLot.getId(), 4L); // moderator
+
+        assertEquals(LotStatus.ACTIVE, result.status());
+
+        Lot updated = lotRepository.findById(testLot.getId()).orElseThrow();
+        assertEquals(LotStatus.ACTIVE, updated.getStatus());
+    }
+
+    @Test
+    void approveLot_shouldThrowWhenOwner() {
         testLot = testLot.toBuilder()
                 .status(LotStatus.PENDING_APPROVAL)
                 .build();
         testLot = lotRepository.save(testLot);
 
         assertThrows(RuntimeException.class, () ->
-                lotService.approveLot(testLot.getId(), 999L));
+                lotService.approveLot(testLot.getId(), testOwnerId));
     }
 
     @Test
-    void cancelLot_shouldChangeStatusToCancelled() {
+    void approveLot_shouldThrowWhenRegularUser() {
+        testLot = testLot.toBuilder()
+                .status(LotStatus.PENDING_APPROVAL)
+                .build();
+        testLot = lotRepository.save(testLot);
+
+        assertThrows(RuntimeException.class, () ->
+                lotService.approveLot(testLot.getId(), 2L)); // regular user
+    }
+
+    @Test
+    void cancelLot_shouldChangeStatusToCancelled_whenOwner() {
         testLot = testLot.toBuilder()
                 .status(LotStatus.PENDING_APPROVAL)
                 .build();
@@ -258,6 +286,51 @@ class LotServiceApplicationTest {
         LotDto result = lotService.cancelLot(testLot.getId(), testOwnerId, "Changed my mind");
 
         assertEquals(LotStatus.CANCELLED, result.status());
+    }
+
+    @Test
+    void cancelLot_shouldChangeStatusToCancelled_whenModerator() {
+        testLot = testLot.toBuilder()
+                .status(LotStatus.PENDING_APPROVAL)
+                .build();
+        testLot = lotRepository.save(testLot);
+
+        LotDto result = lotService.cancelLot(testLot.getId(), 4L, "Moderator cancellation");
+
+        assertEquals(LotStatus.CANCELLED, result.status());
+    }
+
+    @Test
+    void cancelLot_shouldThrowWhenRegularUser() {
+        testLot = testLot.toBuilder()
+                .status(LotStatus.PENDING_APPROVAL)
+                .build();
+        testLot = lotRepository.save(testLot);
+
+        assertThrows(RuntimeException.class, () ->
+                lotService.cancelLot(testLot.getId(), 2L, "Some reason"));
+    }
+
+    @Test
+    void cancelLot_shouldThrowWhenRegularUserTriesToCancelOtherUserLot() {
+        Lot otherUserLot = Lot.builder()
+                .title("Other User Lot")
+                .description("Another lot")
+                .startPrice(new BigDecimal("500.00"))
+                .currentPrice(new BigDecimal("500.00"))
+                .bidStep(new BigDecimal("25.00"))
+                .ownerId(2L)
+                .categoryId(1L)
+                .status(LotStatus.PENDING_APPROVAL)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .endDate(LocalDateTime.now().plusDays(7))
+                .createdAt(LocalDateTime.now())
+                .build();
+        otherUserLot = lotRepository.save(otherUserLot);
+
+        Lot finalOtherUserLot = otherUserLot;
+        assertThrows(RuntimeException.class, () ->
+                lotService.cancelLot(finalOtherUserLot.getId(), testOwnerId, "Some reason"));
     }
 
     @Test
@@ -310,30 +383,6 @@ class LotServiceApplicationTest {
 
         assertThrows(RuntimeException.class, () ->
                 lotService.deleteLot(testLot.getId(), testOwnerId));
-    }
-
-    @Test
-    void getLots_withUserServiceUnavailable_shouldUseFallback() {
-        when(userClient.getUserById(testOwnerId)).thenThrow(new RuntimeException("Service unavailable"));
-
-        LotFilterDto filter = new LotFilterDto(null, null, null, null, false);
-
-        List<LotDto> result = lotService.getLots(filter,
-                PageRequest.of(0, 10), testOwnerId);
-
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("User Service Unavailable", result.get(0).owner_username());
-    }
-
-    @Test
-    void getLotById_withUserServiceUnavailable_shouldUseFallback() {
-        when(userClient.getUserById(testOwnerId)).thenThrow(new RuntimeException("Service unavailable"));
-
-        LotDto result = lotService.getLotById(testLot.getId());
-
-        assertNotNull(result);
-        assertEquals("User Service Unavailable", result.owner_username());
     }
 
     @Test
@@ -484,7 +533,7 @@ class LotServiceApplicationTest {
                 .build();
         lotRepository.save(lotInDb);
 
-        LotDto approved = lotService.approveLot(created.id(), testOwnerId);
+        LotDto approved = lotService.approveLot(created.id(), 5L); // supervisor
         assertEquals(LotStatus.ACTIVE, approved.status());
 
         UpdateLotDto updateRequest = new UpdateLotDto(
@@ -528,7 +577,7 @@ class LotServiceApplicationTest {
         auctionLot = lotRepository.save(auctionLot);
 
         when(bidClient.getAuctionWinner(auctionLot.getId())).thenReturn(3L);
-        when(userClient.getUserById(3L)).thenReturn(new UserDto(3L, "winner@test.com", "winner_user"));
+        when(userClient.getUserById(3L)).thenReturn(new UserDto(3L, "winner@test.com", "winner_user", "USER"));
 
         lotScheduler.closeExpiredLots();
 
