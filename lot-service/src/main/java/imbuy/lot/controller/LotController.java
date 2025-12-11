@@ -64,14 +64,14 @@ public class LotController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a new lot")
+    @Operation(summary = "Create a new lot", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<LotDto> createLot(@Valid @RequestBody CreateLotDto createLotDto) {
         LotDto lot = lotService.createLot(createLotDto, createLotDto.owner_id());
         return new ResponseEntity<>(lot, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}/approve")
-    @Operation(summary = "Approve lot")
+    @Operation(summary = "Approve lot", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<LotDto> approveLot(@PathVariable Long id,
                                              @RequestParam Long currentUserId) {
         LotDto approvedLot = lotService.approveLot(id, currentUserId);
@@ -79,7 +79,7 @@ public class LotController {
     }
 
     @PutMapping("/{id}/cancel")
-    @Operation(summary = "Cancel lot")
+    @Operation(summary = "Cancel lot", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<LotDto> cancelLot(@PathVariable Long id,
                                             @RequestParam Long currentUserId,
                                             @RequestParam(required = false) String reason) {
@@ -88,7 +88,7 @@ public class LotController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update lot")
+    @Operation(summary = "Update lot", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<LotDto> updateLot(@PathVariable Long id,
                                             @RequestParam Long currentUserId,
                                             @Valid @RequestBody UpdateLotDto updateLotDto) {
@@ -97,7 +97,7 @@ public class LotController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete lot")
+    @Operation(summary = "Delete lot", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Void> deleteLot(@PathVariable Long id,
                                           @RequestParam Long currentUserId) {
         lotService.deleteLot(id, currentUserId);

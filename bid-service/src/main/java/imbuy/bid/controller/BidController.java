@@ -37,7 +37,7 @@ public class BidController {
 
     @PostMapping("/lots/{lotId}")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Place a bid on a lot")
+    @Operation(summary = "Place a bid on a lot", security = @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "bearerAuth"))
     public Mono<BidDto> placeBid(
             @PathVariable Long lotId,
             @RequestParam Long currentUserId,
