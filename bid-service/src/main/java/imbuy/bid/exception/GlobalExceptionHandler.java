@@ -2,6 +2,7 @@ package imbuy.bid.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
@@ -60,17 +61,55 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, Object>> handleStatus(ResponseStatusException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", ex.getStatusCode().value());
+        body.put("error", ex.getStatusCode().toString());
+
+        String message = Objects.requireNonNullElse(ex.getReason(), "Unknown error");
+
+        // Add error code for FORBIDDEN (403) errors
+        if (ex.getStatusCode().value() == 403) {
+            body.put("errorCode", "ACCESS_DENIED_403");
+        }
+
+        // Add error code for UNAUTHORIZED (401) errors
+        if (ex.getStatusCode().value() == 401) {
+            body.put("errorCode", "UNAUTHORIZED_401");
+            if (message.contains("JWT token")) {
+                message = "Unauthorized (Error 401): " + message;
+            }
+        }
+
+        body.put("message", message);
 
         return ResponseEntity
                 .status(ex.getStatusCode())
-                .body(Map.of(
-                        "timestamp", LocalDateTime.now(),
-                        "status", ex.getStatusCode().value(),
-                        "error", ex.getStatusCode().toString(),
-                        "message", Objects.requireNonNullElse(ex.getReason(), "Unknown error")
-                ));
+                .body(body);
     }
 
+
+    /**
+     * Handle authentication errors
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthentication(BadCredentialsException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", 401);
+        body.put("error", "Unauthorized");
+        body.put("errorCode", "UNAUTHORIZED_401");
+
+        String message = ex.getMessage();
+        if (message == null || message.isEmpty()) {
+            message = "JWT token is required. Please provide Authorization header with Bearer token";
+        } else {
+            message = "Unauthorized (Error 401): " + message;
+        }
+        body.put("message", message);
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
 
     /**
      * Fallback - catch all other exceptions and return proper error code
