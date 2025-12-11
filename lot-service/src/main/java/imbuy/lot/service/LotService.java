@@ -79,7 +79,7 @@ public class LotService {
     @Transactional
     public LotDto approveLot(Long lotId, Long currentUserId) {
         Lot lot = findLotById(lotId);
-        validateOwnership(lot, currentUserId);
+        validateApprovalPermissions(lot, currentUserId);
         validateLotStatus(lot, LotStatus.PENDING_APPROVAL, "Lot is not awaiting approval");
 
         Lot approvedLot = updateLotStatus(lot, LotStatus.ACTIVE);
@@ -257,6 +257,22 @@ public class LotService {
     private void validateDeletableStatus(Lot lot) {
         if (lot.getStatus() == LotStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete active lot");
+        }
+    }
+
+    private void validateApprovalPermissions(Lot lot, Long currentUserId) {
+        if (lot.getOwnerId().equals(currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Owner cannot approve their own lot");
+        }
+        try {
+            UserDto approver = userClient.getUserById(currentUserId);
+            if (approver == null || approver.role() == null || !"SUPERVISOR".equalsIgnoreCase(approver.role())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only supervisors can approve lots");
+            }
+        } catch (ResponseStatusException ex) {
+            throw ex;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot validate approver permissions");
         }
     }
 

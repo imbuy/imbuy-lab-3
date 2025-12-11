@@ -1,9 +1,4 @@
-server:
-  port: 8080
-
 spring:
-  application:
-    name: api-gateway
   cloud:
     gateway:
       discovery:
@@ -14,71 +9,83 @@ spring:
         - id: user-service-swagger
           uri: lb://user-service
           predicates:
-            - Path=/api/v1/users/v3/api-docs
+            - Path=/users/v3/api-docs
           filters:
-            - StripPrefix=3
-        - id: user-service
+            - StripPrefix=1
+
+        - id: user-service-auth
+          uri: lb://user-service
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: user-service-all
           uri: lb://user-service
           predicates:
             - Path=/users/**
+          filters:
+            - RewritePath=/users/(?<segment>.*), /$\{segment}
+
         - id: category-service-swagger
           uri: lb://category-service
           predicates:
-            - Path=/api/v1/categories/v3/api-docs
+            - Path=/categories/v3/api-docs
           filters:
-            - StripPrefix=3
+            - StripPrefix=1
+
         - id: category-service
           uri: lb://category-service
           predicates:
             - Path=/categories/**
+          filters:
+            - StripPrefix=1
+
+        # Lot Service
         - id: lot-service-swagger
           uri: lb://lot-service
           predicates:
-            - Path=/api/v1/lots/v3/api-docs
+            - Path=/lots/v3/api-docs
           filters:
-            - StripPrefix=3
+            - StripPrefix=1
+
         - id: lot-service
           uri: lb://lot-service
           predicates:
             - Path=/lots/**
+          filters:
+            - StripPrefix=1
+
+        # Bid Service
         - id: bid-service-swagger
           uri: lb://bid-service
           predicates:
-            - Path=/api/v1/bids/v3/api-docs
+            - Path=/bids/v3/api-docs
           filters:
-            - StripPrefix=3
+            - StripPrefix=1
+
         - id: bid-service
           uri: lb://bid-service
           predicates:
             - Path=/bids/**
+          filters:
+            - StripPrefix=1
 
 springdoc:
   api-docs:
     enabled: true
   swagger-ui:
     enabled: true
-    path: /swagger-ui/index.html
+    path: /swagger-ui.html
     config-url: /v3/api-docs/swagger-config
     urls:
       - url: /v3/api-docs
-        name: API Gateway Service
-      - url: /api/v1/users/v3/api-docs
+        name: API Gateway
+      - url: /users/v3/api-docs
         name: User Service
-      - url: /api/v1/lots/v3/api-docs
-        name: Lot Service
-      - url: /api/v1/categories/v3/api-docs
+      - url: /categories/v3/api-docs
         name: Category Service
-      - url: /api/v1/bids/v3/api-docs
+      - url: /lots/v3/api-docs
+        name: Lot Service
+      - url: /bids/v3/api-docs
         name: Bid Service
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: always
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG
-
