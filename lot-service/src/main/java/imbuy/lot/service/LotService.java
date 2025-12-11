@@ -27,13 +27,11 @@ public class LotService {
     private final UserClient userClient;
     private final LotRepository lotRepository;
 
-    @CircuitBreaker(name = "userServiceClient", fallbackMethod = "getLotsFallback")
     public List<LotDto> getLots(LotFilterDto filter, Pageable pageable, Long currentUserId) {
         Page<Lot> lots = findLotsByFilter(filter, pageable);
         return lots.map(this::mapToDtoWithUserInfo).getContent();
     }
 
-    @CircuitBreaker(name = "userServiceClient", fallbackMethod = "getLotByIdFallback")
     public LotDto getLotById(Long id) {
         Lot lot = findLotById(id);
         return mapToDtoWithUserInfo(lot);
@@ -51,28 +49,10 @@ public class LotService {
         return mapToDtoWithUserInfo(savedLot);
     }
 
-    public List<LotDto> getLotsFallback(LotFilterDto filter, Pageable pageable, Long currentUserId, Exception e) {
-        log.warn("Circuit Breaker fallback for getLots. Error: {}", e.getMessage());
-        Page<Lot> lots = findLotsByFilter(filter, pageable);
-        return lots.map(this::createBasicLotDto).getContent();
-    }
-
-    public LotDto getLotByIdFallback(Long id, Exception e) {
-        log.warn("Circuit Breaker fallback for getLotById({}). Error: {}", id, e.getMessage());
-        Lot lot = findLotById(id);
-        return createBasicLotDto(lot);
-    }
-
     private void validateUserExists(Long userId) {
-        try {
-            UserDto user = userClient.getUserById(userId);
-            if (user == null) {
-                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
-            }
-        } catch (Exception e) {
-            log.error("Failed to validate user existence for ID: {}. Error: {}", userId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                    "User service is unavailable. Cannot create lot without user validation.");
+        UserDto user = userClient.getUserById(userId);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
     }
 
@@ -118,41 +98,16 @@ public class LotService {
     }
 
     private LotDto mapToDtoWithUserInfo(Lot lot) {
-        try {
-            UserDto owner = userClient.getUserById(lot.getOwnerId());
-            String ownerName = owner != null ? owner.username() : "Unknown";
+        UserDto owner = userClient.getUserById(lot.getOwnerId());
+        String ownerName = owner != null ? owner.username() : "Unknown";
 
-            String winnerName = null;
-            if (lot.getWinnerId() != null) {
-                UserDto winner = userClient.getUserById(lot.getWinnerId());
-                winnerName = winner != null ? winner.username() : "Unknown";
-            }
-
-            return createLotDto(lot, ownerName, winnerName);
-        } catch (Exception e) {
-            log.warn("Error fetching user info, using fallback. Error: {}", e.getMessage());
-            return createBasicLotDto(lot);
+        String winnerName = null;
+        if (lot.getWinnerId() != null) {
+            UserDto winner = userClient.getUserById(lot.getWinnerId());
+            winnerName = winner != null ? winner.username() : "Unknown";
         }
-    }
 
-    private LotDto createBasicLotDto(Lot lot) {
-        return new LotDto(
-                lot.getId(),
-                lot.getTitle(),
-                lot.getDescription(),
-                lot.getStartPrice(),
-                lot.getCurrentPrice(),
-                lot.getBidStep(),
-                lot.getOwnerId(),
-                "User Service Unavailable",
-                lot.getCategoryId(),
-                lot.getCategoryId() != null ? "Category " + lot.getCategoryId() : null,
-                lot.getStatus(),
-                lot.getStartDate(),
-                lot.getEndDate(),
-                lot.getWinnerId(),
-                "User Service Unavailable"
-        );
+        return createLotDto(lot, ownerName, winnerName);
     }
 
     private LotDto createLotDto(Lot lot, String ownerName, String winnerName) {
